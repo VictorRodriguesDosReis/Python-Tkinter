@@ -161,10 +161,10 @@ class Signup:
     def emailExists(self, email):
         ## Try to connect in database and execute the 'select'
         try:
-            db = connect("127.0.0.1", "root", "", "python")
+            db = connect("127.0.0.1", "root", "root", "project_python")
 
             cursor = db.cursor()
-            cursor.execute("select exists (select * from signup where email = '{}')".format(email))
+            cursor.execute("call p_EmailExists('{}');".format(email))
             data = cursor.fetchone()
         
         except:
@@ -182,12 +182,12 @@ class Signup:
     def register(self, name, sex, email, password):
         ## Try to connect in database and insert the new user
         try:
-            db = connect("127.0.0.1", "root", "", "python")
+            db = connect("127.0.0.1", "root", "root", "project_python")
             
             try:               
                 cursor = db.cursor()
                     
-                cursor.execute("insert into signup (name, sex, email, password) values ('{}', '{}', '{}', '{}');".format(name, sex, email, password))
+                cursor.execute("call p_RegisterUser('{}', '{}', '{}', '{}')".format(name, sex, email, password))
                 db.commit()
                 
                 self.warning["text"] = "Your register was successful"

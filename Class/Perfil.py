@@ -55,11 +55,11 @@ class Perfil:
 		self.lblName["fg"] = "#fff"
 		self.lblName.pack(anchor=W)
 		
-		self.name = StringVar()
-		self.name.set(name)
+		name = StringVar()
+		name.set(self.name)
 
 		self.txtName = Entry(self.frameColumn1)
-		self.txtName["textvariable"] = self.name
+		self.txtName["textvariable"] = name
 		self.txtName.pack(fill=BOTH, expand=1, anchor=W)
 
 		## EMAIL
@@ -70,11 +70,11 @@ class Perfil:
 		self.lblEmail["fg"] = "#fff"
 		self.lblEmail.pack(anchor=W)
 		
-		self.email = StringVar()
-		self.email.set(email)
+		email = StringVar()
+		email.set(self.email)
 
 		self.txtEmail = Entry(self.frameColumn1)
-		self.txtEmail["textvariable"] = self.email
+		self.txtEmail["textvariable"] = email
 		self.txtEmail.pack(fill=BOTH, expand=1, anchor=W)
 
 		## SEX
@@ -192,33 +192,43 @@ class Perfil:
 
 		## Variable to save the user Email
 		em = self.txtEmail.get()
-
-		## Variable to save procedure that verify if exists email
-		query = "call p_SelectEmail('{}')".format(em)
 		
 		## Variable to save the user Sex
-		sx = self.cmbSex.get()
+		sx = self.cmbSex.get()[0]
+
 
 		## Set the style of lblWarning message
-		error = self.lblWarning["fg"] = self.title["fg"] = self.master.header["bg"] = self.lblInformation["fg"] = self.lblChangePassword["fg"] = "#f00"
+		self.lblWarning["fg"] = self.title["fg"] = self.master.header["bg"] = self.lblInformation["fg"] = self.lblChangePassword["fg"] = "#f00"
 
 		if nm[1] < 5:
 			self.lblWarning["text"] = "Please type your full name"
-			error
-			
-		elif em != self.email:
-			if self.select(query):
-				self.lblWarning["text"] = "This e-mail already exists, choose another"
-				error
-			
+
 		elif '@' not in em or '.com' not in em:
 			self.lblWarning["text"] = "E-mail invalid"
-			error
+
+		elif em != self.email or nm[0] != self.name or sx != self.sex:
+			## Variable to save procedure that verify if exists email
+			querySelect = "call p_EmailExists('{}')".format(em)
+			queryExecute = "call p_UpdateUserInformations('{}', '{}', '{}', '{}')".format(nm[0], em, sx, self.id)
+
+			canUpdate = True
+
+			if em != self.email:
+				if self.select(querySelect):
+					canUpdate = False
+					error = self.lblWarning["fg"] = self.title["fg"] = self.master.header["bg"] = self.lblInformation["fg"] = self.lblChangePassword["fg"] = "#f00"
+					self.lblWarning["text"] = "This e-mail already exists, choose another"
+
+			if canUpdate:
+				if self.execute(queryExecute):
+					self.setUserVariable(self.txtName.get(), self.txtEmail.get(), self.cmbSex.get()[0])
+					self.lblWarning["fg"] = self.title["fg"] = self.master.header["bg"] = self.lblInformation["fg"] = self.lblChangePassword["fg"] = "#0f0"
+					self.lblWarning["text"] = "Datas successfully updated"
 
 		else:
-			query = "p_UpdateUserInformations('{}', '{}', '{}')".format(nm[0], em, sx)
-			if self.execute(query):
-				self.setUserVariable(self.txtName.get(), self.txtEmail.get(), self.cmbSex.get())
+			self.lblWarning["fg"] = self.title["fg"] = self.master.header["bg"] = self.lblInformation["fg"] = self.lblChangePassword["fg"] = "#ff0"
+			self.lblWarning["text"] = ""
+
 
 	## VERIFY IF THE PASSWORD WAS FILLED CORRECTLY
 	def verifyPassword(self):
@@ -229,27 +239,26 @@ class Perfil:
 		pw.append(self.txtConfirmNewPassword.get())
 
 		## Variable that save the procedure that verify password
-		query = "p_SelectPassword('{}', '{}')".format(self.txtCurrentPassword.get(), self.id)
+		query = "call p_VerifyPassword('{}', '{}')".format(self.id, self.txtCurrentPassword.get())
 
 		## Set the style of warning message
 		error = self.lblWarning["fg"] = self.title["fg"] = self.master.header["bg"] = self.lblInformation["fg"] = self.lblChangePassword["fg"] = "#f00"
 
 		if pw[0] < 5:
 			self.lblWarning["text"] = "The password must be at least 5 characters"
-			error
 			
 		elif pw[1] != pw[2]:
 			self.lblWarning["text"] = "The passwords need to be equals"
-			error
 
 		elif not self.select(query):
 			self.lblWarning["text"] = "The current password is wrong"
-			error
 
 		else:
-			query = "p_UpdateUserPassword('{}', '{}', '{}')".format(pw[1])
+			query = "call p_UpdateUserPassword('{}', '{}')".format(self.id, pw[1])
 			if self.execute(query):
 				self.setUserVariable(self.txtName.get(), self.txtEmail.get(), self.cmbSex.get())
+				self.lblWarning["fg"] = self.title["fg"] = self.master.header["bg"] = self.lblInformation["fg"] = self.lblChangePassword["fg"] = "#0f0"
+				self.lblWarning["text"] = "Datas successfully updated"
 
 
 	## LOGOUT
@@ -263,7 +272,7 @@ class Perfil:
 	## DELETE ACCOUNT IN DATABASE
 	def deleteAccount(self):
 		if messagebox.askyesno("WARNING", "Do You really want to delete your account ?"):
-			query = "p_DeleteAccount('{}')".format(self.id)
+			query = "call p_DeleteAccount('{}')".format(self.id)
 			self.execute(query)
 			self.deslogar()
 
@@ -276,7 +285,7 @@ class Perfil:
 	def execute(self, query):
 		## Try to connect in database and execute the 'select'
 		try:
-			db = connect("127.0.0.1", "root", "", "python")
+			db = connect("127.0.0.1", "root", "root", "project_python")
 
 			cursor = db.cursor()
 			cursor.execute(query)
@@ -294,7 +303,7 @@ class Perfil:
 	def select(self, query):
 		## Try to connect in database and execute the 'select'
 		try:
-			db = connect("127.0.0.1", "root", "", "python")
+			db = connect("127.0.0.1", "root", "root", "project_python")
 
 			cursor = db.cursor()
 			cursor.execute(query)
@@ -304,6 +313,7 @@ class Perfil:
 			self.lblWarning["text"] = "Error trying to connect to server"
 		
 		db.close()
+
 
 		if data[0]:
 			return True

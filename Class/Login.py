@@ -84,12 +84,12 @@ class Login:
 		
 		## Try to connect in database and execute the 'select'
 		try:
-			db = connect("127.0.0.1", "root", "", "python")
+			db = connect("127.0.0.1", "root", "root", "project_python")
 			
 			cursor = db.cursor()
 			
 		
-			cursor.execute("select email, password, name, sex, id from signup where email = '{}'".format(email))
+			cursor.execute("call p_SelectByEmail('{}')".format(email))
 			em_pw_sx = cursor.fetchone()
 
 
